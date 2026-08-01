@@ -21,3 +21,4 @@ numlines=$(grep -r "$searchstr" "$filesdir" | wc -l)
 echo "The number of files are ${numfiles} and the number of matching lines are ${numlines}"
 
 exit 0
+
