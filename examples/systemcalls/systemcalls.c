@@ -17,6 +17,13 @@ bool do_system(const char *cmd)
  *   or false() if it returned a failure
 */
 
+	int result = system(cmd);
+
+	if (result == -1)
+		return false;
+	else if (WIFEXITED(result) && WEXITSTATUS(result) == 0)
+		return true;
+
     return true;
 }
 
@@ -47,7 +54,7 @@ bool do_exec(int count, ...)
     command[count] = NULL;
     // this line is to avoid a compile warning before your implementation is complete
     // and may be removed
-    command[count] = command[count];
+    // command[count] = command[count];
 
 /*
  * TODO:
@@ -60,6 +67,24 @@ bool do_exec(int count, ...)
 */
 
     va_end(args);
+	
+	int status;
+	pid_t pid;
+
+	pid = fork();
+	if (pid == -1)
+		return false;
+	else if (pid == 0)
+	{
+		execv(command[0], command);
+		
+		exit(EXIT_FAILURE);
+	}
+
+	if (waitpid(pid, &status, 0) == -1)
+		return false;
+	else if (WIFEXITED(status) && WEXITSTATUS(status) == 0)
+		return true;
 
     return true;
 }
@@ -82,7 +107,7 @@ bool do_exec_redirect(const char *outputfile, int count, ...)
     command[count] = NULL;
     // this line is to avoid a compile warning before your implementation is complete
     // and may be removed
-    command[count] = command[count];
+    // command[count] = command[count];
 
 
 /*
@@ -95,5 +120,38 @@ bool do_exec_redirect(const char *outputfile, int count, ...)
 
     va_end(args);
 
+	int status;
+	pid_t pid;
+
+	pid = fork();
+	if (pid == -1)
+		return false;
+	else if (pid == 0)
+	{
+		int fd;
+		fd = open(outputfile, O_WRONLY | O_CREAT | O_TURNC, S_RUSR | S_WUSR | S_RGRP | S_ROTH);
+		if (fd == -1)
+			exit(EXIT_FAILURE);
+		
+		if (dup2(fd, STDOUT_FILENO) == -1)
+		{
+			close(fd);
+			exit(EXIT_FAILURE);
+		}
+		if (dup2(fd, STDERR_FILENO) == -1)
+		{
+			close(fd);
+			exit(EXIT_FAILURE);
+		}
+
+		close(fd);
+
+		execv(command[0], command);
+	}
+
+	if (waitpi(pid, &status, 0) == -1)
+		return false;
+	else if (WIFEXITED(status) && WEXITSTATUS(statuss) == 0)
+		return true;
     return true;
 }
