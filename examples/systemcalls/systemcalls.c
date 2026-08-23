@@ -24,7 +24,7 @@ bool do_system(const char *cmd)
 	else if (WIFEXITED(result) && WEXITSTATUS(result) == 0)
 		return true;
 
-    return true;
+    return false;
 }
 
 /**
@@ -86,7 +86,7 @@ bool do_exec(int count, ...)
 	else if (WIFEXITED(status) && WEXITSTATUS(status) == 0)
 		return true;
 
-    return true;
+    return false;
 }
 
 /**
@@ -129,7 +129,7 @@ bool do_exec_redirect(const char *outputfile, int count, ...)
 	else if (pid == 0)
 	{
 		int fd;
-		fd = open(outputfile, O_WRONLY | O_CREAT | O_TURNC, S_RUSR | S_WUSR | S_RGRP | S_ROTH);
+		fd = open(outputfile, O_WRONLY | O_CREAT | O_TRUNC, 0644);
 		if (fd == -1)
 			exit(EXIT_FAILURE);
 		
@@ -147,11 +147,14 @@ bool do_exec_redirect(const char *outputfile, int count, ...)
 		close(fd);
 
 		execv(command[0], command);
+
+		exit(EXIT_FAILURE);
 	}
 
-	if (waitpi(pid, &status, 0) == -1)
+	if (waitpid(pid, &status, 0) == -1)
 		return false;
-	else if (WIFEXITED(status) && WEXITSTATUS(statuss) == 0)
+	else if (WIFEXITED(status) && WEXITSTATUS(status) == 0)
 		return true;
-    return true;
+
+    return false;
 }
