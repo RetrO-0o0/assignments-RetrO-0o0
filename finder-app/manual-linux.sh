@@ -20,6 +20,7 @@ else
 	OUTDIR=$1
 	echo "Using passed directory ${OUTDIR} for output"
 fi
+
 ROOTFS=${OUTDIR}/rootfs
 
 mkdir -p ${OUTDIR}
@@ -43,6 +44,7 @@ if [ ! -e ${OUTDIR}/linux-stable/arch/${ARCH}/boot/Image ]; then
 fi
 
 echo "Adding the Image in outdir"
+cp "${OUTDIR}/linux-stable/arch/${ARCH}/boot/Image" "${OUTDIR}/Image"
 
 echo "Creating the staging directory for the root filesystem"
 cd "$OUTDIR"
@@ -79,69 +81,24 @@ make -j"$(nproc)" ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE}
 make -j"$(nproc)" ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} CONFIG_PREFIX=${OUTDIR}/rootfs install
 
 echo "Library dependencies"
-${CROSS_COMPILE}readelf -a bin/busybox | grep "program interpreter"
-${CROSS_COMPILE}readelf -a bin/busybox | grep "Shared library"
+${CROSS_COMPILE}readelf -a ${OUTDIR}/rootfs/bin/busybox | grep "program interpreter"
+${CROSS_COMPILE}readelf -a ${OUTDIR}/rootfs/bin/busybox | grep "Shared library"
 
 # TODO: Add library dependencies to rootfs
-${CROSS_COMPILE}readelf -a bin/busybox | grep "program interpreter"
-${CROSS_COMPILE}readelf -a bin/busybox | grep "Shared library"
+LIBM="/opt/arm-gnu-toolchain-15.3.rel1-x86_64-aarch64-none-linux-gnu/aarch64-none-linux-gnu/libc/lib64/libm.so.6"
+LIBC="/opt/arm-gnu-toolchain-15.3.rel1-x86_64-aarch64-none-linux-gnu/aarch64-none-linux-gnu/libc/lib64/libc.so.6"
+LIBRESOLVE="/opt/arm-gnu-toolchain-15.3.rel1-x86_64-aarch64-none-linux-gnu/aarch64-none-linux-gnu/libc/lib64/libresolv.so.2"
+LDLINUXAARCH="/opt/arm-gnu-toolchain-15.3.rel1-x86_64-aarch64-none-linux-gnu/aarch64-none-linux-gnu/libc/lib/ld-linux-aarch64.so.1"
 
-BUSYBOX="${ROOTFS}/bin/busybox"
-READELF="${CROSS_COMPILE}readelf"
-SYSROOT="$(${CROSS_COMPILE}gcc -print-sysroot)"
+cp "${LIBM}" "${ROOTFS}/lib"
+cp "${LIBC}" "${ROOTFS}/lib"
+cp "${LIBRESOLVE}" "${ROOTFS}/lib"
+cp "${LDLINUXAARCH}" "${ROOTFS}/lib"
 
-if [ ! -f ${BUSYBOX} ]; then
-	echo "BusyBox wasn't installed"
-	exit 1
-fi
-
-copy_runtime_file()
-{
-	local target_path="$1"
-	local filename
-	local source_file
-
-	filename="$(basename "${target_path}")"
-
-	 source_file="$(
-        find "${SYSROOT}" \
-            \( -type f -o -type l \) \
-            -name "${filename}" \
-            -print -quit
-    )"
-
-	 if [ -z "${source_file}" ]; then
-        echo "ERROR: ${filename} not found in ${SYSROOT}" >&2
-        exit 1
-    fi
-
-    mkdir -p "${ROOTFS}$(dirname "${target_path}")"
-
-	cp -L "${source_file}" "${ROOTFS}${target_path}"
-
-	echo "Copied: ${source_file} -> ${ROOTFS}${target_path}"
-}
-
-INTERPRETER="$(
-    "${READELF}" -lW "${BUSYBOX}" |
-    awk -F'[][]' '/Requesting program interpreter/ { print $2 }' |
-    awk '{ print $NF }'
-)"
-
-if [ -n "${INTERPRETER}" ]; then
-    echo "Dynamic linker: ${INTERPRETER}"
-    copy_runtime_file "${INTERPRETER}"
-	"${READELF}" -dW "${BUSYBOX}" |
-		awk -F'[][]' '/NEEDED/ { print $2 }' |
-		while IFS= read -r library; do
-			[ -n "${library}" ] || continue
-
-			echo "Shared library: ${library}"
-			copy_runtime_file "/lib/${library}"
-		done
-	else
-		echo "BusyBox is statically linked; no shared libraries are required."
-fi
+cp "${LIBM}" "${ROOTFS}/lib64"
+cp "${LIBC}" "${ROOTFS}/lib64"
+cp "${LIBRESOLVE}" "${ROOTFS}/lib64"
+cp "${LDLINUXAARCH}" "${ROOTFS}/lib64"
 
 
 # TODO: Make device nodes
