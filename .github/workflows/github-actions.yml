@@ -1,23 +1,7 @@
 name: assignment-test
-<<<<<<< HEAD
-<<<<<<< HEAD
-on:
-    push:
-        tags-ignore:
-            - '*'
-        branches:
-            - '*'
-=======
-on: 
-  push:
-      tags-ignore:
-          - '*'
-      branches:
-          - '*'
->>>>>>> e34c0d0 (yaml fix for a2)
-=======
+
 on: [push]
->>>>>>> 81484b9 (Revert "yaml fix for a2")
+
 jobs:
     unit-test:
         container: cuaesd/aesd-autotest:24-unit-test
@@ -29,11 +13,7 @@ jobs:
           - name: Run unit test
             run: ./unit-test.sh
     full-test:
-<<<<<<< HEAD
-        container: cuaesd/aesd-autotest:24-assignment1
-=======
-        container: cuaesd/aesd-autotest:assignment2
->>>>>>> f8ec531 (Updates for assignment 2)
+        container: cuaesd/aesd-autotest:24-assignment2
         runs-on: ubuntu-latest
         steps:
           - uses: actions/checkout@v2
